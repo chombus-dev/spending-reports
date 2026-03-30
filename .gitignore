@@ -2,3 +2,4 @@ config.json
 Transactions/
 Output/
 .DS_Store
+.vscode/
