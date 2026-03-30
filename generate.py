@@ -8,10 +8,10 @@ Usage:
   python generate.py --template template.html --config config.json
 """
 
-import csv, json, argparse, calendar
+import csv, json, argparse
 from pathlib import Path
 from collections import defaultdict
-from datetime import datetime, date, timedelta
+from datetime import datetime
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -137,43 +137,6 @@ def compute_categories(rows, cfg, top_n=15):
             for k, v in sorted(totals.items(), key=lambda x: -x[1])[:top_n]]
 
 
-def compute_sparklines(txns, cfg, months):
-    """Weekly spend and income totals across the report period."""
-    year0, mon0 = map(int, months[0].split('-'))
-    year1, mon1 = map(int, months[-1].split('-'))
-    start = date(year0, mon0, 1)
-    end   = date(year1, mon1, calendar.monthrange(year1, mon1)[1])
-
-    weeks = []
-    d = start
-    while d <= end:
-        iso = d.isocalendar()
-        w = f"{iso[0]}-W{iso[1]:02d}"
-        if w not in weeks:
-            weeks.append(w)
-        d += timedelta(days=7)
-
-    spend_by_week  = defaultdict(float)
-    income_by_week = defaultdict(float)
-    for r in txns:
-        try:
-            dt = datetime.strptime(r['Date'], '%Y-%m-%d').date()
-        except ValueError:
-            continue
-        iso = dt.isocalendar()
-        w = f"{iso[0]}-W{iso[1]:02d}"
-        if is_expense_row(r, cfg):
-            spend_by_week[w]  -= r['_amount']
-        elif is_income_row(r, cfg):
-            income_by_week[w] += r['_amount']
-
-    return (
-        [round(spend_by_week.get(w, 0), 2)  for w in weeks],
-        [round(income_by_week.get(w, 0), 2) for w in weeks],
-        weeks,
-    )
-
-
 def compute_sankey(txns, cfg):
     income_by_source = defaultdict(float)
     for r in txns:
@@ -293,8 +256,6 @@ def build_data(txns, cfg):
     for m in months:
         categories[m] = compute_categories(by_month[m], cfg)
 
-    spend_sparkline, income_sparkline, weeks = compute_sparklines(txns, cfg, months)
-
     top_merchants = {'all': compute_top_merchants(txns, cfg)}
     for m in months:
         top_merchants[m] = compute_top_merchants(by_month[m], cfg)
@@ -319,9 +280,6 @@ def build_data(txns, cfg):
         'month_labels':      month_labels,
         'last_updated':      last_updated,
         'kpi':               kpi,
-        'sparkline_spend':   spend_sparkline,
-        'sparkline_income':  income_sparkline,
-        'sparkline_weeks':   weeks,
         'sankey':            compute_sankey(txns, cfg),
         'categories':        categories,
         'top_merchants':     top_merchants,

@@ -152,18 +152,22 @@ body {
   overflow: hidden;
 }
 .kpi-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  min-height: 32px;
+  display: flex;
+  align-items: flex-end;
   margin-bottom: 8px;
 }
 .kpi-value {
-  font-size: 28px;
+  font-size: clamp(16px, 2vw, 24px);
   font-weight: 700;
   color: var(--text-white);
   margin-bottom: 4px;
+  white-space: nowrap;
 }
 .kpi-delta {
   display: inline-block;
@@ -177,13 +181,6 @@ body {
 .kpi-delta.neutral { background: rgba(136,146,176,0.15); color: var(--text-muted); }
 .kpi-delta.income-up { background: var(--green-dim); color: var(--green); }
 .kpi-delta.income-down { background: var(--coral-dim); color: var(--coral); }
-.kpi-sparkline {
-  position: absolute;
-  bottom: 0; right: 0;
-  width: 100px;
-  height: 40px;
-  opacity: 0.4;
-}
 /* ── SANKEY ── */
 #sankey-container {
   background: var(--card);
@@ -399,25 +396,21 @@ body {
         <div class="kpi-label">Total Household Spend</div>
         <div class="kpi-value" id="kpi-spend">—</div>
         <span class="kpi-delta" id="kpi-spend-delta"></span>
-        <canvas class="kpi-sparkline" id="spark-spend"></canvas>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Discretionary Spend</div>
         <div class="kpi-value" id="kpi-disc">—</div>
         <span class="kpi-delta" id="kpi-disc-delta"></span>
-        <canvas class="kpi-sparkline" id="spark-disc"></canvas>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Total Income</div>
         <div class="kpi-value" id="kpi-income">—</div>
         <span class="kpi-delta" id="kpi-income-delta"></span>
-        <canvas class="kpi-sparkline" id="spark-income"></canvas>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Net Savings</div>
         <div class="kpi-value" id="kpi-savings">—</div>
         <span class="kpi-delta" id="kpi-savings-delta"></span>
-        <canvas class="kpi-sparkline" id="spark-savings"></canvas>
       </div>
     </div>
   </div>
@@ -569,9 +562,6 @@ function renderKPI() {
   const savDelta = k.net_savings >= 0 ? 'income' : 'spend';
   setDelta('kpi-savings-delta', 0, savDelta);
 
-  // Sparklines
-  drawSparkline('spark-spend', DATA.sparkline_spend, '#60a5fa');
-  drawSparkline('spark-income', DATA.sparkline_income, '#4ade80');
 }
 
 function setDelta(id, val, type) {
@@ -588,29 +578,6 @@ function setDelta(id, val, type) {
   } else {
     el.className = 'kpi-delta ' + (val > 0 ? 'income-up' : 'income-down');
   }
-}
-
-function drawSparkline(canvasId, values, color) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas || !values || values.length < 2) return;
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width = 100;
-  const h = canvas.height = 40;
-  ctx.clearRect(0,0,w,h);
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const range = max - min || 1;
-  const step = w / (values.length - 1);
-  ctx.beginPath();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
-  values.forEach((v, i) => {
-    const x = i * step;
-    const y = h - ((v - min) / range) * (h - 4) - 2;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
 }
 
 // ─── SANKEY ──────────────────────────────────────────────────────────────────
