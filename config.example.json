@@ -1,0 +1,36 @@
+{
+  "income_categories": [
+    "Paychecks",
+    "Other Income",
+    "Interest"
+  ],
+  "exclude_categories": [
+    "Transfer",
+    "Credit Card Payment"
+  ],
+  "essential_categories": [
+    "Mortgage & Rent",
+    "Retirement",
+    "Taxes",
+    "Insurance",
+    "Medical",
+    "Internet & Cable",
+    "Phone",
+    "Education",
+    "Financial Fees"
+  ],
+  "flag_exempt_categories": [
+    "Mortgage & Rent",
+    "Retirement",
+    "Taxes",
+    "Transfer",
+    "Credit Card Payment",
+    "Education"
+  ],
+  "income_source_map": {
+    "my employer": "Salary",
+    "acme corp": "Salary"
+  },
+  "secondary_member": null,
+  "flag_threshold": 2000
+}
