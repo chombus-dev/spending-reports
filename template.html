@@ -431,10 +431,8 @@ body {
   <!-- Category Breakdown -->
   <div class="section" id="section-categories">
     <div class="section-title">Category Breakdown</div>
-    <div class="two-col">
-      <div class="card">
-        <canvas id="chart-categories" height="400"></canvas>
-      </div>
+    <div class="card">
+      <canvas id="chart-categories" height="400"></canvas>
     </div>
   </div>
 
@@ -446,9 +444,9 @@ body {
         <div style="font-size:14px;font-weight:600;color:var(--text-white);margin-bottom:12px;">🏪 Top 5 Merchants</div>
         <div id="top-merchants-list"></div>
       </div>
-      <div class="card" id="card-jolee">
-        <div style="font-size:14px;font-weight:600;color:var(--text-white);margin-bottom:12px;">👵 Jolee Summary</div>
-        <div id="jolee-summary"></div>
+      <div class="card" id="card-secondary">
+        <div style="font-size:14px;font-weight:600;color:var(--text-white);margin-bottom:12px;">Secondary Member Summary</div>
+        <div id="secondary-summary"></div>
       </div>
       <div class="card" id="card-flags" style="display:none;">
         <div style="font-size:14px;font-weight:600;color:var(--coral);margin-bottom:12px;">⚠️ Suspicious Flags</div>
@@ -495,23 +493,23 @@ body {
       </div>
     </div>
 
-    <div class="txn-toggle" onclick="toggleTxn('jolee')">
+    <div class="txn-toggle" onclick="toggleTxn('secondary')">
       <div>
-        <span class="toggle-label">Jolee Transactions</span>
-        <span class="toggle-count" id="jolee-count"></span>
+        <span class="toggle-label">Secondary Transactions</span>
+        <span class="toggle-count" id="secondary-count"></span>
       </div>
       <span class="toggle-arrow">▾</span>
     </div>
-    <div class="txn-body" id="txn-jolee">
-      <input class="txn-search" placeholder="Search transactions..." oninput="filterTxn('jolee', this.value)">
+    <div class="txn-body" id="txn-secondary">
+      <input class="txn-search" placeholder="Search transactions..." oninput="filterTxn('secondary', this.value)">
       <div style="overflow-x:auto;">
-        <table class="txn-table" id="table-jolee">
+        <table class="txn-table" id="table-secondary">
           <thead><tr>
-            <th onclick="sortTxn('jolee','date')">Date <span class="sort-arrow">↕</span></th>
-            <th onclick="sortTxn('jolee','merchant')">Merchant <span class="sort-arrow">↕</span></th>
-            <th onclick="sortTxn('jolee','category')">Category <span class="sort-arrow">↕</span></th>
-            <th onclick="sortTxn('jolee','account')">Account <span class="sort-arrow">↕</span></th>
-            <th onclick="sortTxn('jolee','amount')">Amount <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('secondary','date')">Date <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('secondary','merchant')">Merchant <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('secondary','category')">Category <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('secondary','account')">Account <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('secondary','amount')">Amount <span class="sort-arrow">↕</span></th>
           </tr></thead>
           <tbody></tbody>
         </table>
@@ -743,8 +741,8 @@ function renderHighlights() {
   });
   document.getElementById('top-merchants-list').innerHTML = mhtml;
 
-  // Jolee
-  const j = DATA.jolee_summary[currentMonth] || DATA.jolee_summary['all'];
+  // Secondary member
+  const j = DATA.secondary_summary[currentMonth] || DATA.secondary_summary['all'];
   let jhtml = `<div style="font-size:22px;font-weight:700;color:var(--amber);margin-bottom:12px;">${fmt(j.total)}</div>`;
   if (j.mom !== 0) {
     const arrow = j.mom > 0 ? '↑' : '↓';
@@ -759,7 +757,7 @@ function renderHighlights() {
     </div>`;
   });
   jhtml += '</div>';
-  document.getElementById('jolee-summary').innerHTML = jhtml;
+  document.getElementById('secondary-summary').innerHTML = jhtml;
 
   // Flags
   const flags = DATA.flags || [];
@@ -804,14 +802,14 @@ function renderIncome() {
 // ─── TRANSACTIONS ────────────────────────────────────────────────────────────
 function toggleTxn(type) {
   const toggle = event.currentTarget;
-  const body = document.getElementById('txn-' + (type === 'hh' ? 'hh' : 'jolee'));
+  const body = document.getElementById('txn-' + (type === 'hh' ? 'hh' : 'secondary'));
   toggle.classList.toggle('open');
   body.classList.toggle('open');
 }
 
 function renderTransactions() {
   renderTxnTable('hh', DATA.transactions.household);
-  renderTxnTable('jolee', DATA.transactions.jolee);
+  renderTxnTable('secondary', DATA.transactions.secondary);
 }
 
 function renderTxnTable(type, allTxns) {
@@ -820,7 +818,7 @@ function renderTxnTable(type, allTxns) {
     txns = txns.filter(t => t.date.startsWith(currentMonth));
   }
 
-  const countEl = document.getElementById(type === 'hh' ? 'hh-count' : 'jolee-count');
+  const countEl = document.getElementById(type === 'hh' ? 'hh-count' : 'secondary-count');
   countEl.textContent = ` · ${txns.length} transactions`;
 
   const tbody = document.querySelector('#table-' + type + ' tbody');

@@ -169,7 +169,7 @@ class TestComputeKPI(unittest.TestCase):
         kpi = compute_kpi(rows, cfg)
         self.assertAlmostEqual(kpi['total_spend'], 150.0)
         self.assertAlmostEqual(kpi['hh_spend'],    100.0)
-        self.assertAlmostEqual(kpi['jolee_spend'],  50.0)
+        self.assertAlmostEqual(kpi['secondary_spend'], 50.0)
 
 
 # ── Flags ─────────────────────────────────────────────────────────────────────
@@ -263,7 +263,7 @@ class TestBuildData(unittest.TestCase):
         ]
         data = build_data(rows, cfg)
         self.assertEqual(len(data['transactions']['household']), 1)
-        self.assertEqual(len(data['transactions']['jolee']),     1)
+        self.assertEqual(len(data['transactions']['secondary']), 1)
 
 
 if __name__ == '__main__':

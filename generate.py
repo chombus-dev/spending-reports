@@ -122,7 +122,7 @@ def compute_kpi(rows, cfg, prev_rows=None):
         'disc_spend':   round(disc_spend,   2),
         'total_income': round(total_income, 2),
         'net_savings':  round(net_savings,  2),
-        'jolee_spend':  round(sec_spend,    2),  # kept as jolee_spend for template compat
+        'secondary_spend': round(sec_spend, 2),
         'delta_spend':  delta_spend,
         'delta_income': delta_income,
     }
@@ -215,7 +215,7 @@ def compute_top_merchants(rows, cfg, top_n=5):
             for k, v in sorted(by_merchant.items(), key=lambda x: -x[1]['amount'])[:top_n]]
 
 
-def compute_jolee_summary(rows, cfg, prev_rows=None):
+def compute_secondary_summary(rows, cfg, prev_rows=None):
     secondary = [r for r in rows if r['_secondary'] and is_expense_row(r, cfg)]
     total = -sum(r['_amount'] for r in secondary)
 
@@ -299,9 +299,9 @@ def build_data(txns, cfg):
     for m in months:
         top_merchants[m] = compute_top_merchants(by_month[m], cfg)
 
-    jolee_summary = {'all': compute_jolee_summary(txns, cfg)}
+    secondary_summary = {'all': compute_secondary_summary(txns, cfg)}
     for i, m in enumerate(months):
-        jolee_summary[m] = compute_jolee_summary(by_month[m], cfg, by_month[months[i-1]] if i > 0 else None)
+        secondary_summary[m] = compute_secondary_summary(by_month[m], cfg, by_month[months[i-1]] if i > 0 else None)
 
     income = {'all': compute_income(txns, cfg)}
     for m in months:
@@ -325,12 +325,12 @@ def build_data(txns, cfg):
         'sankey':            compute_sankey(txns, cfg),
         'categories':        categories,
         'top_merchants':     top_merchants,
-        'jolee_summary':     jolee_summary,
+        'secondary_summary':     secondary_summary,
         'flags':             compute_flags(txns, cfg),
         'income':            income,
         'transactions': {
             'household': format_txns([r for r in txns if not r['_secondary']], cfg),
-            'jolee':     format_txns([r for r in txns if r['_secondary']], cfg),
+            'secondary': format_txns([r for r in txns if r['_secondary']], cfg),
         },
         'month_totals':      month_totals,
     }
