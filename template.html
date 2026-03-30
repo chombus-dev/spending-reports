@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Household Spending Report — 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+<style>
+:root {
+  --bg: #0f1117;
+  --card: #1a1d2e;
+  --border: #2a2d3a;
+  --blue: #60a5fa;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --coral: #f87171;
+  --purple: #c084fc;
+  --text: #e0e0e0;
+  --text-white: #fff;
+  --text-muted: #8892b0;
+  --nav-width: 220px;
+  --blue-dim: rgba(96,165,250,0.15);
+  --green-dim: rgba(74,222,128,0.15);
+  --amber-dim: rgba(251,191,36,0.15);
+  --coral-dim: rgba(248,113,113,0.15);
+  --purple-dim: rgba(192,132,252,0.15);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+/* ── NAV ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0;
+  width: var(--nav-width);
+  height: 100vh;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+  overflow-y: auto;
+}
+.nav-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-white);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.nav-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.nav-btn:hover { background: rgba(96,165,250,0.08); color: var(--text); }
+.nav-btn.active {
+  background: rgba(96,165,250,0.12);
+  border-color: var(--blue);
+  color: var(--text-white);
+}
+.nav-btn .nav-total {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  opacity: 0.8;
+}
+.nav-btn.active .nav-total { opacity: 1; }
+.hamburger {
+  display: none;
+  position: fixed;
+  top: 16px; left: 16px;
+  z-index: 200;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-white);
+  font-size: 22px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+/* ── MAIN ── */
+.main {
+  margin-left: var(--nav-width);
+  padding: 32px 40px;
+  max-width: 1200px;
+}
+.main h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin-bottom: 8px;
+}
+.main .subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+}
+.section {
+  margin-bottom: 40px;
+  transition: opacity 0.3s ease;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 20px;
+  background: var(--blue);
+  border-radius: 2px;
+}
+/* ── KPI CARDS ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.kpi-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin-bottom: 4px;
+}
+.kpi-delta {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+.kpi-delta.up { background: var(--coral-dim); color: var(--coral); }
+.kpi-delta.down { background: var(--green-dim); color: var(--green); }
+.kpi-delta.neutral { background: rgba(136,146,176,0.15); color: var(--text-muted); }
+.kpi-delta.income-up { background: var(--green-dim); color: var(--green); }
+.kpi-delta.income-down { background: var(--coral-dim); color: var(--coral); }
+.kpi-sparkline {
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 100px;
+  height: 40px;
+  opacity: 0.4;
+}
+/* ── SANKEY ── */
+#sankey-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  min-height: 400px;
+}
+#sankey-container svg { width: 100%; }
+/* ── CATEGORY BREAKDOWN ── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+/* ── HIGHLIGHTS ── */
+.three-col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.three-col.two-visible {
+  grid-template-columns: repeat(2, 1fr);
+}
+.highlight-rank {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.highlight-rank:last-child { border-bottom: none; }
+.highlight-rank .rank-num {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--blue);
+  width: 24px;
+}
+.highlight-rank .rank-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+}
+.highlight-rank .rank-amount {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-white);
+}
+.highlight-rank .rank-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+.flag-item {
+  padding: 8px 12px;
+  background: rgba(248,113,113,0.08);
+  border-left: 3px solid var(--coral);
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.flag-item .flag-note { color: var(--coral); font-weight: 500; }
+.flag-item .flag-detail { color: var(--text-muted); }
+/* ── INCOME ── */
+.income-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.income-bar-label {
+  font-size: 13px;
+  color: var(--text);
+  width: 140px;
+  flex-shrink: 0;
+}
+.income-bar-track {
+  flex: 1;
+  height: 24px;
+  background: var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.income-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+.income-bar-amount {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-white);
+  width: 100px;
+  text-align: right;
+  flex-shrink: 0;
+}
+/* ── TRANSACTIONS ── */
+.txn-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: background 0.2s;
+}
+.txn-toggle:hover { background: rgba(96,165,250,0.06); }
+.txn-toggle .toggle-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-white);
+}
+.txn-toggle .toggle-count {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.txn-toggle .toggle-arrow {
+  font-size: 18px;
+  color: var(--text-muted);
+  transition: transform 0.3s;
+}
+.txn-toggle.open .toggle-arrow { transform: rotate(180deg); }
+.txn-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+  margin-bottom: 12px;
+}
+.txn-body.open { max-height: 80vh; overflow-y: auto; }
+.txn-search {
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  margin-bottom: 8px;
+  outline: none;
+}
+.txn-search:focus { border-color: var(--blue); }
+.txn-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.txn-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.txn-table th:hover { color: var(--blue); }
+.txn-table th .sort-arrow { margin-left: 4px; font-size: 10px; }
+.txn-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.txn-table tr:hover td { background: rgba(96,165,250,0.04); }
+.txn-amount-pos { color: var(--green); font-weight: 600; }
+.txn-amount-neg { color: var(--coral); font-weight: 600; }
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .nav { transform: translateX(-100%); transition: transform 0.3s; }
+  .nav.open { transform: translateX(0); }
+  .hamburger { display: block; }
+  .main { margin-left: 0; padding: 24px 16px; padding-top: 64px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .two-col, .three-col, .three-col.two-visible { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<button class="hamburger" onclick="document.querySelector('.nav').classList.toggle('open')">☰</button>
+
+<nav class="nav">
+  <div class="nav-title" id="nav-title">💰 Spending</div>
+  <div id="nav-months"></div>
+</nav>
+
+<div class="main">
+  <h1>Household Spending Report</h1>
+  <p class="subtitle" id="report-subtitle"></p>
+
+  <!-- KPI Cards -->
+  <div class="section" id="section-kpi">
+    <div class="section-title">Overview</div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Household Spend</div>
+        <div class="kpi-value" id="kpi-spend">—</div>
+        <span class="kpi-delta" id="kpi-spend-delta"></span>
+        <canvas class="kpi-sparkline" id="spark-spend"></canvas>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Discretionary Spend</div>
+        <div class="kpi-value" id="kpi-disc">—</div>
+        <span class="kpi-delta" id="kpi-disc-delta"></span>
+        <canvas class="kpi-sparkline" id="spark-disc"></canvas>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Total Income</div>
+        <div class="kpi-value" id="kpi-income">—</div>
+        <span class="kpi-delta" id="kpi-income-delta"></span>
+        <canvas class="kpi-sparkline" id="spark-income"></canvas>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Net Savings</div>
+        <div class="kpi-value" id="kpi-savings">—</div>
+        <span class="kpi-delta" id="kpi-savings-delta"></span>
+        <canvas class="kpi-sparkline" id="spark-savings"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sankey -->
+  <div class="section" id="section-sankey">
+    <div class="section-title">Cash Flow</div>
+    <div id="sankey-container"></div>
+  </div>
+
+  <!-- Category Breakdown -->
+  <div class="section" id="section-categories">
+    <div class="section-title">Category Breakdown</div>
+    <div class="two-col">
+      <div class="card">
+        <canvas id="chart-categories" height="400"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Highlights -->
+  <div class="section" id="section-highlights">
+    <div class="section-title">Highlights</div>
+    <div class="three-col" id="highlights-grid">
+      <div class="card" id="card-top-merchants">
+        <div style="font-size:14px;font-weight:600;color:var(--text-white);margin-bottom:12px;">🏪 Top 5 Merchants</div>
+        <div id="top-merchants-list"></div>
+      </div>
+      <div class="card" id="card-jolee">
+        <div style="font-size:14px;font-weight:600;color:var(--text-white);margin-bottom:12px;">👵 Jolee Summary</div>
+        <div id="jolee-summary"></div>
+      </div>
+      <div class="card" id="card-flags" style="display:none;">
+        <div style="font-size:14px;font-weight:600;color:var(--coral);margin-bottom:12px;">⚠️ Suspicious Flags</div>
+        <div id="flags-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Income -->
+  <div class="section" id="section-income">
+    <div class="section-title">Income</div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <span style="font-size:14px;color:var(--text-muted);">Total Income</span>
+        <span style="font-size:24px;font-weight:700;color:var(--green);" id="income-total">—</span>
+      </div>
+      <div id="income-bars"></div>
+    </div>
+  </div>
+
+  <!-- Transactions -->
+  <div class="section" id="section-transactions">
+    <div class="section-title">Transactions</div>
+    <div class="txn-toggle" onclick="toggleTxn('hh')">
+      <div>
+        <span class="toggle-label">Household Transactions</span>
+        <span class="toggle-count" id="hh-count"></span>
+      </div>
+      <span class="toggle-arrow">▾</span>
+    </div>
+    <div class="txn-body" id="txn-hh">
+      <input class="txn-search" placeholder="Search transactions..." oninput="filterTxn('hh', this.value)">
+      <div style="overflow-x:auto;">
+        <table class="txn-table" id="table-hh">
+          <thead><tr>
+            <th onclick="sortTxn('hh','date')">Date <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('hh','merchant')">Merchant <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('hh','category')">Category <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('hh','account')">Account <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('hh','amount')">Amount <span class="sort-arrow">↕</span></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="txn-toggle" onclick="toggleTxn('jolee')">
+      <div>
+        <span class="toggle-label">Jolee Transactions</span>
+        <span class="toggle-count" id="jolee-count"></span>
+      </div>
+      <span class="toggle-arrow">▾</span>
+    </div>
+    <div class="txn-body" id="txn-jolee">
+      <input class="txn-search" placeholder="Search transactions..." oninput="filterTxn('jolee', this.value)">
+      <div style="overflow-x:auto;">
+        <table class="txn-table" id="table-jolee">
+          <thead><tr>
+            <th onclick="sortTxn('jolee','date')">Date <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('jolee','merchant')">Merchant <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('jolee','category')">Category <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('jolee','account')">Account <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTxn('jolee','amount')">Amount <span class="sort-arrow">↕</span></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── EMBEDDED DATA ───────────────────────────────────────────────────────────
+const DATA = /*SPENDING_DATA*/;
+
+const COLORS = ['#60a5fa','#4ade80','#fbbf24','#f87171','#c084fc'];
+const COLORS_DIM = ['rgba(96,165,250,0.5)','rgba(74,222,128,0.5)','rgba(251,191,36,0.5)','rgba(248,113,113,0.5)','rgba(192,132,252,0.5)'];
+
+let currentMonth = 'all';
+let categoryChart = null;
+let sortState = {};
+
+function fmt(n) {
+  if (n === undefined || n === null) return '—';
+  const neg = n < 0;
+  const abs = Math.abs(n);
+  const s = abs >= 1000 ? '$' + abs.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})
+                        : '$' + abs.toFixed(2);
+  return neg ? '-' + s : s;
+}
+
+function selectMonth(m) {
+  currentMonth = m;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.month === m));
+  document.querySelector('.nav').classList.remove('open');
+  renderAll();
+}
+
+function renderAll() {
+  renderKPI();
+  renderSankey();
+  renderCategories();
+  renderHighlights();
+  renderIncome();
+  renderTransactions();
+}
+
+// ─── KPI ─────────────────────────────────────────────────────────────────────
+function renderKPI() {
+  const k = DATA.kpi[currentMonth];
+  document.getElementById('kpi-spend').textContent = fmt(k.total_spend);
+  document.getElementById('kpi-disc').textContent = fmt(k.disc_spend);
+  document.getElementById('kpi-income').textContent = fmt(k.total_income);
+  document.getElementById('kpi-savings').textContent = fmt(k.net_savings);
+
+  // Deltas
+  setDelta('kpi-spend-delta', k.delta_spend, 'spend');
+  setDelta('kpi-disc-delta', k.delta_spend, 'spend');
+  setDelta('kpi-income-delta', k.delta_income, 'income');
+  const savDelta = k.net_savings >= 0 ? 'income' : 'spend';
+  setDelta('kpi-savings-delta', 0, savDelta);
+
+  // Sparklines
+  drawSparkline('spark-spend', DATA.sparkline_spend, '#60a5fa');
+  drawSparkline('spark-income', DATA.sparkline_income, '#4ade80');
+}
+
+function setDelta(id, val, type) {
+  const el = document.getElementById(id);
+  if (val === 0) {
+    el.className = 'kpi-delta neutral';
+    el.textContent = '—';
+    return;
+  }
+  const arrow = val > 0 ? '↑' : '↓';
+  el.textContent = arrow + Math.abs(val).toFixed(1) + '%';
+  if (type === 'spend') {
+    el.className = 'kpi-delta ' + (val > 0 ? 'up' : 'down');
+  } else {
+    el.className = 'kpi-delta ' + (val > 0 ? 'income-up' : 'income-down');
+  }
+}
+
+function drawSparkline(canvasId, values, color) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !values || values.length < 2) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width = 100;
+  const h = canvas.height = 40;
+  ctx.clearRect(0,0,w,h);
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const range = max - min || 1;
+  const step = w / (values.length - 1);
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  values.forEach((v, i) => {
+    const x = i * step;
+    const y = h - ((v - min) / range) * (h - 4) - 2;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
+// ─── SANKEY ──────────────────────────────────────────────────────────────────
+function renderSankey() {
+  const container = document.getElementById('sankey-container');
+  container.innerHTML = '';
+  const sk = DATA.sankey;
+  if (!sk || !sk.nodes.length) return;
+
+  const width = container.clientWidth - 48;
+  const height = Math.max(400, sk.nodes.length * 28);
+
+  const svg = d3.select('#sankey-container').append('svg')
+    .attr('width', width).attr('height', height);
+
+  const sankey = d3.sankey()
+    .nodeId(d => d.index)
+    .nodeWidth(18)
+    .nodePadding(14)
+    .nodeAlign(d3.sankeyJustify)
+    .extent([[1, 1], [width - 1, height - 6]]);
+
+  // Deep copy
+  const graph = sankey({
+    nodes: sk.nodes.map((d,i) => ({...d, index: i})),
+    links: sk.links.map(d => ({...d}))
+  });
+
+  // Links
+  svg.append('g')
+    .selectAll('path')
+    .data(graph.links)
+    .join('path')
+    .attr('d', d3.sankeyLinkHorizontal())
+    .attr('fill', 'none')
+    .attr('stroke', (d,i) => COLORS[i % 5])
+    .attr('stroke-opacity', 0.3)
+    .attr('stroke-width', d => Math.max(1, d.width))
+    .append('title')
+    .text(d => `${graph.nodes[d.source.index]?.name || ''} → ${graph.nodes[d.target.index]?.name || ''}\n$${d.value.toLocaleString()}`);
+
+  // Nodes
+  svg.append('g')
+    .selectAll('rect')
+    .data(graph.nodes)
+    .join('rect')
+    .attr('x', d => d.x0)
+    .attr('y', d => d.y0)
+    .attr('height', d => Math.max(1, d.y1 - d.y0))
+    .attr('width', d => d.x1 - d.x0)
+    .attr('fill', (d,i) => COLORS[i % 5])
+    .attr('rx', 3);
+
+  // Labels
+  svg.append('g')
+    .selectAll('text')
+    .data(graph.nodes)
+    .join('text')
+    .attr('x', d => d.x0 < width / 2 ? d.x1 + 8 : d.x0 - 8)
+    .attr('y', d => (d.y0 + d.y1) / 2)
+    .attr('dy', '0.35em')
+    .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+    .attr('fill', '#e0e0e0')
+    .attr('font-size', '12px')
+    .attr('font-family', '-apple-system, sans-serif')
+    .text(d => d.name + ' (' + fmt(d.value) + ')');
+}
+
+// ─── CATEGORIES ──────────────────────────────────────────────────────────────
+function renderCategories() {
+  const cats = DATA.categories[currentMonth] || DATA.categories['all'];
+  const labels = cats.map(c => c.name);
+  const values = cats.map(c => c.amount);
+
+  if (categoryChart) categoryChart.destroy();
+  const ctx = document.getElementById('chart-categories').getContext('2d');
+  categoryChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: values.map((_, i) => COLORS_DIM[i % 5]),
+        borderColor: values.map((_, i) => COLORS[i % 5]),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => fmt(ctx.parsed.x)
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8892b0', callback: v => fmt(v) },
+          grid: { color: 'rgba(42,45,58,0.5)' }
+        },
+        y: {
+          ticks: { color: '#e0e0e0', font: { size: 11 } },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}
+
+
+// ─── HIGHLIGHTS ──────────────────────────────────────────────────────────────
+function renderHighlights() {
+  // Top merchants
+  const merchants = DATA.top_merchants[currentMonth] || DATA.top_merchants['all'];
+  let mhtml = '';
+  merchants.forEach((m, i) => {
+    mhtml += `<div class="highlight-rank">
+      <span class="rank-num">${i+1}</span>
+      <span class="rank-name">${m.name}</span>
+      <span class="rank-amount">${fmt(m.amount)}</span>
+      <span class="rank-count">${m.count} txn</span>
+    </div>`;
+  });
+  document.getElementById('top-merchants-list').innerHTML = mhtml;
+
+  // Jolee
+  const j = DATA.jolee_summary[currentMonth] || DATA.jolee_summary['all'];
+  let jhtml = `<div style="font-size:22px;font-weight:700;color:var(--amber);margin-bottom:12px;">${fmt(j.total)}</div>`;
+  if (j.mom !== 0) {
+    const arrow = j.mom > 0 ? '↑' : '↓';
+    const cls = j.mom > 0 ? 'up' : 'down';
+    jhtml += `<span class="kpi-delta ${cls}" style="margin-bottom:12px;display:inline-block;">${arrow}${Math.abs(j.mom).toFixed(1)}% MoM</span>`;
+  }
+  jhtml += '<div style="margin-top:8px;">';
+  j.top_cats.forEach(c => {
+    jhtml += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;">
+      <span style="color:var(--text)">${c.name}</span>
+      <span style="color:var(--text-white);font-weight:600;">${fmt(c.amount)}</span>
+    </div>`;
+  });
+  jhtml += '</div>';
+  document.getElementById('jolee-summary').innerHTML = jhtml;
+
+  // Flags
+  const flags = DATA.flags || [];
+  const flagCard = document.getElementById('card-flags');
+  const grid = document.getElementById('highlights-grid');
+  if (flags.length === 0) {
+    flagCard.style.display = 'none';
+    grid.className = 'three-col two-visible';
+  } else {
+    flagCard.style.display = '';
+    grid.className = 'three-col';
+    let fhtml = '';
+    flags.forEach(f => {
+      fhtml += `<div class="flag-item">
+        <div class="flag-note">${f.note}</div>
+        <div class="flag-detail">${f.merchant} · ${f.date} · ${f.category}</div>
+      </div>`;
+    });
+    document.getElementById('flags-list').innerHTML = fhtml;
+  }
+}
+
+// ─── INCOME ──────────────────────────────────────────────────────────────────
+function renderIncome() {
+  const inc = DATA.income[currentMonth] || DATA.income['all'];
+  document.getElementById('income-total').textContent = fmt(inc.total);
+  const barColors = COLORS;
+  let html = '';
+  inc.sources.forEach((s, i) => {
+    const pct = inc.total > 0 ? (s.amount / inc.total * 100) : 0;
+    html += `<div class="income-bar-row">
+      <div class="income-bar-label">${s.name}</div>
+      <div class="income-bar-track">
+        <div class="income-bar-fill" style="width:${pct}%;background:${barColors[i%5]};"></div>
+      </div>
+      <div class="income-bar-amount">${fmt(s.amount)}</div>
+    </div>`;
+  });
+  document.getElementById('income-bars').innerHTML = html;
+}
+
+// ─── TRANSACTIONS ────────────────────────────────────────────────────────────
+function toggleTxn(type) {
+  const toggle = event.currentTarget;
+  const body = document.getElementById('txn-' + (type === 'hh' ? 'hh' : 'jolee'));
+  toggle.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+function renderTransactions() {
+  renderTxnTable('hh', DATA.transactions.household);
+  renderTxnTable('jolee', DATA.transactions.jolee);
+}
+
+function renderTxnTable(type, allTxns) {
+  let txns = allTxns;
+  if (currentMonth !== 'all') {
+    txns = txns.filter(t => t.date.startsWith(currentMonth));
+  }
+
+  const countEl = document.getElementById(type === 'hh' ? 'hh-count' : 'jolee-count');
+  countEl.textContent = ` · ${txns.length} transactions`;
+
+  const tbody = document.querySelector('#table-' + type + ' tbody');
+  tbody.innerHTML = '';
+  txns.forEach(t => {
+    const tr = document.createElement('tr');
+    const amtClass = t.amount >= 0 ? 'txn-amount-pos' : 'txn-amount-neg';
+    tr.innerHTML = `<td>${t.date}</td><td>${t.merchant}</td><td>${t.category}</td><td>${t.account}</td><td class="${amtClass}">${fmt(t.amount)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterTxn(type, query) {
+  const tableId = 'table-' + type;
+  const rows = document.querySelectorAll('#' + tableId + ' tbody tr');
+  const q = query.toLowerCase();
+  rows.forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function sortTxn(type, col) {
+  const key = type + '-' + col;
+  const asc = sortState[key] === 'asc' ? 'desc' : 'asc';
+  sortState[key] = asc;
+
+  const colIdx = ['date','merchant','category','account','amount'].indexOf(col);
+  const tableId = 'table-' + type;
+  const tbody = document.querySelector('#' + tableId + ' tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+
+  rows.sort((a, b) => {
+    let va = a.cells[colIdx].textContent;
+    let vb = b.cells[colIdx].textContent;
+    if (col === 'amount') {
+      va = parseFloat(va.replace(/[$,]/g, '')) || 0;
+      vb = parseFloat(vb.replace(/[$,]/g, '')) || 0;
+      return asc === 'asc' ? va - vb : vb - va;
+    }
+    return asc === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+function buildNav() {
+  document.getElementById('nav-title').textContent = '\u{1F4B0} ' + DATA.year + ' Spending';
+  let html = `<button class="nav-btn active" data-month="all" onclick="selectMonth('all')">
+    <span>All Months</span><span class="nav-total" id="nav-total-all"></span>
+  </button>`;
+  DATA.months.forEach(m => {
+    html += `<button class="nav-btn" data-month="${m}" onclick="selectMonth('${m}')">
+      <span>${DATA.month_labels[m]}</span><span class="nav-total" id="nav-total-${m}"></span>
+    </button>`;
+  });
+  document.getElementById('nav-months').innerHTML = html;
+}
+
+function buildSubtitle() {
+  const labels = DATA.months.map(m => DATA.month_labels[m].split(' ')[0]);
+  const first = labels[0], last = labels[labels.length - 1];
+  document.getElementById('report-subtitle').textContent =
+    `${first}\u2013${last} ${DATA.year}\u00b7 Updated ${DATA.last_updated}`;
+}
+
+function initNavTotals() {
+  const totals = DATA.month_totals;
+  for (const [m, v] of Object.entries(totals)) {
+    const el = document.getElementById('nav-total-' + m);
+    if (el) el.textContent = fmt(v);
+  }
+}
+
+window.addEventListener('load', () => {
+  buildNav();
+  buildSubtitle();
+  initNavTotals();
+  renderAll();
+});
+window.addEventListener('resize', () => {
+  renderSankey();
+});
+</script>
+</body>
+</html>
